@@ -21,48 +21,46 @@ import jakarta.transaction.Transactional;
 @ApplicationScoped
 public class MovieService {
 
- @Inject
- MovieRepository movieRepository;
- 
- @Inject
- ProducerRepository producerRepository;
+	@Inject
+	MovieRepository movieRepository;
 
- @Transactional
- public void importMovies(InputStream csvStream) throws IOException {
-     try (BufferedReader reader = new BufferedReader(new InputStreamReader(csvStream, StandardCharsets.UTF_8))) {
-         reader.readLine(); 
-         
-         String line;
-         while ((line = reader.readLine()) != null) {
-             String[] fields = line.split(";", -1);
-             if (fields.length < 5) continue;
-             
-             Movie movie = new Movie();
-             movie.year = Integer.parseInt(fields[0].trim());
-             movie.title = fields[1].trim();
-             movie.studios = fields[2].trim();
-             movie.winner = "yes".equalsIgnoreCase(fields[4].trim());
-             
-             parseProducers(fields[3].trim()).forEach(producerName -> {
-                 Producer producer = producerRepository.findByName(producerName)
-                     .orElseGet(() -> {
-                         Producer p = new Producer();
-                         p.name = producerName;
-                         producerRepository.persist(p);
-                         return p;
-                     });
-                 movie.producers.add(producer);
-             });
-             
-             movieRepository.persistAndFlush(movie);
-         }
-     }
- }
- 
- public List<String> parseProducers(String producersString) {
-     return Arrays.stream(producersString.split(",| and "))
-         .map(String::trim)
-         .filter(name -> !name.isEmpty())
-         .collect(Collectors.toList());
- }
+	@Inject
+	ProducerRepository producerRepository;
+
+	@Transactional
+	public void importMovies(InputStream csvStream) throws IOException {
+		try (BufferedReader reader = new BufferedReader(new InputStreamReader(csvStream, StandardCharsets.UTF_8))) {
+			reader.readLine();
+
+			String line;
+			while ((line = reader.readLine()) != null) {
+				String[] fields = line.split(";", -1);
+				if (fields.length < 5)
+					continue;
+
+				Movie movie = new Movie();
+				movie.year = Integer.parseInt(fields[0].trim());
+				movie.title = fields[1].trim();
+				movie.studios = fields[2].trim();
+				movie.winner = "yes".equalsIgnoreCase(fields[4].trim());
+
+				parseProducers(fields[3].trim()).forEach(producerName -> {
+					Producer producer = producerRepository.findByName(producerName).orElseGet(() -> {
+						Producer p = new Producer();
+						p.name = producerName;
+						producerRepository.persist(p);
+						return p;
+					});
+					movie.producers.add(producer);
+				});
+
+				movieRepository.persistAndFlush(movie);
+			}
+		}
+	}
+
+	public List<String> parseProducers(String producersString) {
+		return Arrays.stream(producersString.split(",(?![^()]*\\))|\\b(and)\\b")).map(String::trim)
+				.filter(name -> !name.isEmpty()).collect(Collectors.toList());
+	}
 }

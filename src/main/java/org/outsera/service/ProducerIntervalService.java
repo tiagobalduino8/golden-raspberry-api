@@ -28,13 +28,14 @@ public class ProducerIntervalService {
 
     private Map<String, List<Integer>> groupWinsByProducer(List<Movie> winnerMovies) {
         return winnerMovies.stream()
-            .flatMap(movie -> {
-                return movie.producers.stream()
-                    .map(producer -> new AbstractMap.SimpleEntry<>(producer.name, movie.year));
-            })
+            .flatMap(movie -> movie.producers.stream()
+                .map(producer -> new AbstractMap.SimpleEntry<>(producer.name, movie.year)))
             .collect(Collectors.groupingBy(
                 Map.Entry::getKey,
-                Collectors.mapping(Map.Entry::getValue, Collectors.toList())
+                Collectors.mapping(
+                    Map.Entry::getValue,
+                    Collectors.toList()
+                )
             ));
     }
 
@@ -44,8 +45,10 @@ public class ProducerIntervalService {
         winsByProducer.forEach((producer, years) -> {
             if (years.size() < 2) return;
             
-            List<Integer> sortedYears = new ArrayList<>(years);
-            Collections.sort(sortedYears);
+            List<Integer> sortedYears = years.stream()
+                .distinct()
+                .sorted()
+                .collect(Collectors.toList());
             
             for (int i = 1; i < sortedYears.size(); i++) {
                 int previousWin = sortedYears.get(i - 1);
